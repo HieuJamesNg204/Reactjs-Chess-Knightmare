@@ -87,7 +87,7 @@ const LoginPage = () => {
                         )}
 
                         <p className="mt-8 text-center text-neutral-400 text-sm">
-                            New to Luxury Chess?{' '}
+                            New to Chess Knightmare?{' '}
                             <Link to="/register" className="text-amber-500 hover:text-amber-400 font-semibold transition-colors">
                                 Create an Account
                             </Link>

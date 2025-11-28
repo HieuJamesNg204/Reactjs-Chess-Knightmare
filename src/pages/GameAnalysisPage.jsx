@@ -132,7 +132,7 @@ const GameAnalysisPage = () => {
                 <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-amber-900/10 via-neutral-950 to-neutral-950"></div>
                 <div className="w-16 h-16 border-4 border-amber-500/30 border-t-amber-500 rounded-full animate-spin"></div>
                 <p className="mt-6 text-amber-500 font-serif tracking-[0.3em] text-sm animate-pulse uppercase">
-                    {analysisStatus === 'analyzing' ? 'Running Stockfish Neural Net' : 'Retrieving Battle Data'}
+                    {analysisStatus === 'analyzing' ? 'Please wait while the battle is being reviewed! This may take a few minutes . . . ' : 'Retrieving Battle Data'}
                 </p>
                 
             </div>
@@ -285,10 +285,6 @@ const GameAnalysisPage = () => {
                     <div className="flex-grow bg-neutral-900/90 backdrop-blur border border-neutral-800 rounded-xl p-6 shadow-xl flex flex-col overflow-hidden max-h-[300px]">
                         <div className="flex justify-between items-center mb-4">
                             <h3 className="text-xs font-bold text-neutral-400 uppercase tracking-widest">Move History</h3>
-                            
-
-[Image of Chess algebraic notation]
-
                         </div>
                         <div className="flex-grow overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-neutral-700 scrollbar-track-transparent">
                             <div className="grid grid-cols-6 gap-2 text-xs text-neutral-600 mb-2 uppercase tracking-wider border-b border-neutral-800 pb-2 sticky top-0 bg-neutral-900/95">

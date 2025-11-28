@@ -1,11 +1,20 @@
-import React, { useState, useCallback, useEffect, useContext } from 'react';
+import React, { useState, useCallback, useEffect, useContext, useRef } from 'react';
 import { Chessboard } from 'react-chessboard';
 import { Chess } from 'chess.js';
 import { useParams, useNavigate } from 'react-router-dom';
 import API from '../api/api';
 import { AuthContext } from '../context/AuthContext.jsx';
 import GameStatusModal from '../components/GameStatusModal.jsx';
-import { FaFlag, FaHistory, FaChessBoard, FaRobot, FaUserAstronaut, FaMicrochip } from 'react-icons/fa';
+import { 
+    FaFlag, 
+    FaHistory, 
+    FaChessBoard, 
+    FaRobot, 
+    FaUserAstronaut, 
+    FaMicrochip,
+    FaExclamationTriangle,
+    FaTimes
+} from 'react-icons/fa';
 
 const GameBoardPage = () => {
     const { gameId } = useParams();
@@ -19,17 +28,20 @@ const GameBoardPage = () => {
     const [moveFrom, setMoveFrom] = useState('');
     const [optionSquares, setOptionSquares] = useState({});
 
-    const [isModalOpen, setIsModalOpen] = useState(false);
+    // Modals state
+    const [isModalOpen, setIsModalOpen] = useState(false); // Game Over Modal
+    const [showAbortModal, setShowAbortModal] = useState(false); // Abort Confirmation Modal
 
     const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-
-    const isMounted = React.useRef(true);
+    const isMounted = useRef(true);
 
     useEffect(() => {
         return () => {
-            isMounted.current = false; // Cleanup when component unmounts
+            isMounted.current = false; 
         };
     }, []);
+
+    // --- Chess Logic ---
 
     const safeGameMutate = (modify) => {
         setGame((g) => {
@@ -52,22 +64,14 @@ const GameBoardPage = () => {
         if (!token) return;
 
         try {
-            // 1. Send the player's move to the server
             const response = await API.post(`/games/${gameId}/move`, move, {
                 headers: { 'x-auth-token': `${token}` }
             });
 
-            // 2. DELAY
-            // Wait 500ms to 1500ms to simulate "thinking"
-            // This runs concurrently with the actual network request if placed before,
-            // but placing it here ensures a minimum pause after the server responds.
             await delay(1000); 
 
             if (!isMounted.current) return;
 
-            // 3. Execute Bot's Move
-            // Note: Adjust 'response.data.move' to match your actual API response structure 
-            // (e.g., response.data.botMove, response.data.fen, etc.)
             const botMove = response.data.move; 
             
             if (botMove) {
@@ -78,7 +82,6 @@ const GameBoardPage = () => {
 
         } catch (error) {
             console.error('Failed to send move:', error.response?.data?.message || error.message);
-            // If the move failed (illegal, server error), undo the player's move locally
             safeGameMutate((game) => {
                 game.undo();
             });
@@ -182,6 +185,8 @@ const GameBoardPage = () => {
         return true; 
     }, [safeGameMutate, sendMoveToBackend]);
 
+    // --- Navigation & Actions ---
+
     const handleBackToDashboard = () => {
         navigate('/dashboard');
     };
@@ -254,6 +259,8 @@ const GameBoardPage = () => {
         return () => window.removeEventListener('resize', handleResize);
     }, [loadGame]);
 
+    // --- Status Logic ---
+
     let statusMessage = '';
     let gameResult = 'playing';
     let statusColor = 'text-neutral-200';
@@ -287,6 +294,7 @@ const GameBoardPage = () => {
         <div className="min-h-screen w-full bg-neutral-950 flex flex-col items-center justify-center py-8 px-4 relative">
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-neutral-900 via-neutral-950 to-neutral-950 z-0"></div>
             
+            {/* Game Over Modal */}
             <GameStatusModal
                 isOpen={isModalOpen}
                 statusMessage={statusMessage} 
@@ -294,9 +302,42 @@ const GameBoardPage = () => {
                 onBackToDashboard={handleBackToDashboard}
                 onAnalyze={handleAnalyze}
             />
+
+            {/* Abort Confirmation Modal */}
+            {showAbortModal && (
+                <div className="fixed inset-0 z-[60] flex items-center justify-center bg-neutral-950/90 backdrop-blur-sm animate-in fade-in duration-200">
+                    <div className="relative w-full max-w-sm mx-4 bg-neutral-900 border border-red-500/30 rounded-xl shadow-[0_0_50px_rgba(220,38,38,0.2)] p-1">
+                        <div className="bg-neutral-900/90 rounded-lg p-6 flex flex-col items-center text-center">
+                            <FaExclamationTriangle className="text-4xl text-red-500 mb-4 drop-shadow-[0_0_10px_rgba(220,38,38,0.5)]" />
+                            
+                            <h3 className="text-xl font-serif font-bold text-white mb-2 tracking-wide">CONFIRM ABORT</h3>
+                            <p className="text-neutral-400 text-sm mb-6 leading-relaxed">
+                                Are you sure you want to resign this match? <br/>
+                                <span className="text-red-400">This action cannot be undone.</span>
+                            </p>
+
+                            <div className="flex gap-3 w-full">
+                                <button
+                                    onClick={() => setShowAbortModal(false)}
+                                    className="flex-1 py-3 bg-neutral-800 hover:bg-neutral-700 text-white font-bold rounded-lg transition-all border border-neutral-700 hover:border-neutral-500 text-xs uppercase tracking-widest"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={terminateGame}
+                                    className="flex-1 py-3 bg-red-900/20 hover:bg-red-900/40 text-red-500 hover:text-red-400 border border-red-900/50 hover:border-red-500 font-bold rounded-lg transition-all text-xs uppercase tracking-widest shadow-[0_0_15px_rgba(220,38,38,0.1)]"
+                                >
+                                    Confirm
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
             
             <div className="relative z-10 w-full max-w-7xl grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
                 
+                {/* Board Section */}
                 <div className="lg:col-span-2 flex flex-col items-center">
                     <div className={`w-full max-w-[650px] bg-neutral-900/80 backdrop-blur-xl border ${game.isCheck() ? 'border-red-500/40 shadow-[0_0_30px_rgba(220,38,38,0.2)]' : 'border-amber-500/20 shadow-2xl'} rounded-2xl p-1 transition-all duration-500`}>
                         <div className="w-full flex justify-between items-center px-6 py-3 border-b border-neutral-800 mb-1">
@@ -322,15 +363,19 @@ const GameBoardPage = () => {
                                         borderRadius: '4px',
                                         boxShadow: '0 5px 15px rgba(0,0,0,0.5)',
                                     },
+                                    customDarkSquareStyle: { backgroundColor: '#262626' }, 
+                                    customLightSquareStyle: { backgroundColor: '#525252' },
                                 }}
                             />
                         </div>
                     </div>
                 </div>
 
+                {/* Sidebar Section */}
                 <div className="lg:col-span-1 w-full">
                     <div className="bg-neutral-900/90 backdrop-blur border border-neutral-800 rounded-xl p-6 shadow-xl flex flex-col gap-6 h-full min-h-[600px]">
                         
+                        {/* Player Info */}
                         <div className="space-y-4">
                             <div className="flex items-center justify-between p-4 bg-neutral-800/50 rounded-lg border border-neutral-700">
                                 <div className="flex items-center gap-3">
@@ -365,15 +410,12 @@ const GameBoardPage = () => {
                             </div>
                         </div>
 
+                        {/* Move History */}
                         <div className="flex-grow flex flex-col bg-neutral-950 rounded-lg border border-neutral-800 overflow-hidden relative">
                             <div className="px-4 py-3 bg-neutral-900 border-b border-neutral-800 flex justify-between items-center">
                                 <h3 className="text-xs font-bold text-amber-500 uppercase tracking-widest flex items-center gap-2">
                                     <FaHistory /> Tactical Log
                                 </h3>
-                                
-
-[Image of chess algebraic notation]
-
                                 <FaMicrochip className="text-neutral-700" />
                             </div>
                             <div className="flex-grow overflow-y-auto p-4 font-mono text-sm space-y-1 scrollbar-thin scrollbar-thumb-neutral-700 scrollbar-track-transparent">
@@ -399,8 +441,9 @@ const GameBoardPage = () => {
                             </div>
                         </div>
 
+                        {/* Abort Button (Triggers Modal) */}
                         <button
-                            onClick={terminateGame}
+                            onClick={() => setShowAbortModal(true)}
                             className="w-full py-4 bg-red-900/10 hover:bg-red-900/30 text-red-500 hover:text-red-400 border border-red-900/50 hover:border-red-500 rounded-lg font-bold text-xs uppercase tracking-[0.2em] transition-all duration-300 flex items-center justify-center gap-2 group"
                         >
                             <FaFlag className="group-hover:-translate-y-0.5 transition-transform" />
